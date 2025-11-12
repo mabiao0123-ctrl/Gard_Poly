@@ -1,4 +1,4 @@
-# Gard_Poly
+# Gar_Poly
 
 A Python package for testing and analyzing special classes of polynomials including real stable, Lorentzian, Rayleigh, and Gårding polynomials.
 
