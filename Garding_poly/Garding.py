@@ -351,6 +351,7 @@ def hessian(expr, variables):
     """
     n = len(variables)
     deg=sp.total_degree(expr)
+    H=None
     if deg<2:
         H=sp.Matrix(n,n, lambda i,j:0)
     if deg>2:
@@ -447,7 +448,8 @@ def check_partial_hessians(expr, variables=None):
     For each such derivative, compute its Hessian and check if it has at most 1 positive eigenvalue.
     Return True if all pass, else False.
     """
-   
+    if variables is None:
+        variables = expr.free_symbols
     d = sp.total_degree(expr)
     n = len(variables)
     if d < 2:
@@ -474,7 +476,9 @@ def check_partial_hessians_eigenvalue_iterative(expr, variables=None):
     """Given a degree d polynomial (as sympy expr), check all (d-2)-th order partial derivatives' Hessians.
     For each such derivative, compute its Hessian and check if it has at most 1 positive eigenvalue using iterative method.
     Return True if all pass, else False."
-"""
+""" 
+    if variables is None:
+        variables = expr.free_symbols
     d = sp.total_degree(expr)
     n = len(variables)
     if d < 2:
@@ -516,6 +520,7 @@ def poly_pretreat(poly, variables=None):
     poly_dict = {}
     if isinstance(poly, sp.Expr):
         expr = poly
+        variables = expr.free_symbols
         poly = sp.Poly(poly, *variables)
         poly_dict = sp.Poly(poly, *variables).as_dict()
     elif isinstance(poly, sp.Poly):
@@ -537,8 +542,11 @@ def is_Lorentzian(poly, variables=None,M_convex=False):
     2. The support is M-convex.
     3. All (d-2)-th order partial derivatives have Hessians with at most one positive eigenvalue.
     """
+    expr=None
+    poly_dict = {}
     if isinstance(poly, sp.Expr):
         expr = poly
+        variables = expr.free_symbols
         poly = sp.Poly(poly, *variables)
         poly_dict = sp.Poly(poly, *variables).as_dict()
     elif isinstance(poly, sp.Poly):
@@ -574,8 +582,11 @@ def is_Lorentzian_numerical(poly, variables=None,M_convex=False):
     2. The support is M-convex.
     3. All (d-2)-th order partial derivatives have Hessians with at most one positive eigenvalue.
     """
+    poly_dict={}
+    expr=None   
     if isinstance(poly, sp.Expr):
         expr = poly
+        variables = expr.free_symbols
         poly = sp.Poly(poly, *variables)
         poly_dict = sp.Poly(poly, *variables).as_dict()
     elif isinstance(poly, sp.Poly):
@@ -631,6 +642,7 @@ def homogenize_poly(poly, n, d, variables=None):
     """
     Homogenize a polynomial to degree d in n variables by adding a new variable x0.
     """
+    poly_dict = {}
     if variables is None:
         variables = sp.symbols('x0:%d' % (n+1))
     x0 = variables[0]
@@ -663,7 +675,7 @@ def transform_from_symbol_poly(poly, kappa, variables):
     """"
     Given a symbol polynomial poly in variables, construct a transformation 
     """
-
+    poly_dict={}
     import math
     if isinstance(poly, sp.Expr):
         expr = poly
@@ -695,24 +707,30 @@ def evaluate_transform_poly(mapping,poly,variables=None):
     """
     Given a transform T and a polynomial f, evaluate T(f).
     """
+    poly_dict={}
     if isinstance(poly, sp.Expr):
         expr = poly
+        if variables is None:
+            variables = list(expr.free_symbols)
         poly_dict=sp.Poly(expr,variables).as_dict()
     elif isinstance(poly, sp.Poly):
         poly_dict=poly.as_dict()
-        variables=poly.gens
+        variables=list(poly.gens)
     elif isinstance(poly, dict):
         poly_dict=poly
         if variables is None:
             variables=sp.symbols('x0:%d' % (len(list(poly_dict.keys())[0])))
+        else:
+            variables=list(variables) if not isinstance(variables, list) else variables
 
     poly_dict_new={}
+    m=0
     for key in poly_dict:
         if not key in mapping:
             continue
         target=mapping[key]
-
-        if not len(key)==len(variables):
+        
+        if variables is None or len(key) != len(variables):
             return print("variable numbers are different. cannot evaluate")
         for support in target:
             m=len(support)
@@ -870,7 +888,7 @@ def check_non_neg_opt(f, vars, R=1):
 
     # Try several random starting points to avoid local minima
     min_val = np.inf
-    
+    pts=None
     for _ in range(20):
         x0 = np.random.uniform(0, R, n_vars)
         res = minimize(obj, x0, bounds=bounds, constraints=constraints, method='SLSQP')
@@ -917,15 +935,15 @@ def check_Rayleigh(f, vars, Method="opt", trials=10000,option="show_arg"):
                 return False
         return True
     if not is_homogeneous(f, vars):
-        f=homogenization(f,deg=f.total_degree(),vars=vars,y=None)
+        f=homogenization(f,deg=f.total_degree(),vars=vars,Z=None)
         vars=list(f.gens)
     for i in range(n):
         for j in range(i, n):
             # Work with polynomial expressions (as sympy.Expr) for differentiation,
             # then convert back to Poly if needed.
-            fi_expr = sp.diff(f.as_expr(), vars[i])
-            fj_expr = sp.diff(f.as_expr(), vars[j])
-            fij_expr = sp.diff(fi_expr, vars[j])
+            fi_expr = f.as_expr().diff(vars[i])
+            fj_expr = f.as_expr().diff(vars[j])
+            fij_expr = fi_expr.diff(vars[j])
 
             # build Wronskian as sympy expression
             Wronskian = f.as_expr() * fij_expr - fi_expr * fj_expr

@@ -30,7 +30,7 @@ def is_M_matrix(A):
     # Check all eigenvalues are real and non-negative
     eigvals = A.eigenvals()
     for ev in eigvals:
-        ev_val = sp.re(ev.evalf())
+        ev_val = complex(ev.evalf()).real
         if ev_val < 0:
             return False
     return True
@@ -62,12 +62,6 @@ def multivariate_characteristic_polynomial(A):
     poly = sp.Poly(char_poly_multi, *lambdas)
     return poly
 
-def generate_random_M_matrix(n, min_val=0, max_val=100,sparsity=1):
-    A = random_nonneg_matrix(n, min_val, max_val,sparsity=sparsity)
-    spectral_radius = power_iteration_spectral_radius(A)
-    s=random.randint(int(spectral_radius),2*int(spectral_radius))+1
-    M = (s * sp.eye(n) - A)
-    return M
 
 def homog_inverse_multi_var_char_poly(A):
     n = A.shape[0]
